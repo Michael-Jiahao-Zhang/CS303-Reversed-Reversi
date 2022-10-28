@@ -9,24 +9,15 @@ COLOR_NONE = 0
 random.seed(0)
 search_depth = 5
 
-# 想办法让自己分最大
 weight = np.array([
-    [-10000, 25, -10, 5, 5, -10, 25, -10000],
+    [-1000, 25, -10, 5, 5, -10, 25, -1000],
     [25, 100, -1, -1, -1, -1, 100, 25],
     [-10, -1, -1, -1, -1, -1, -1, -10],
     [-5, -1, -1, -1, -1, -1, -1, -5],
     [-5, -1, -1, -1, -1, -1, -1, -5],
     [-10, -1, -1, -1, -1, -1, -1, -10],
     [25, 100, -1, -1, -1, -1, 100, 25],
-    [-10000, 25, -10, 5, 5, -10, 25, -10000]
-    # [-10000, -1, -1, -1, -1, -1, -1, -10000],
-    # [-1, -1, -1, -1, -1, -1, -1, -1],
-    # [-1, -1, -1, -1, -1, -1, -1, -1],
-    # [-1, -1, -1, -1, -1, -1, -1, -1],
-    # [-1, -1, -1, -1, -1, -1, -1, -1],
-    # [-1, -1, -1, -1, -1, -1, -1, -1],
-    # [-1, -1, -1, -1, -1, -1, -1, -1],
-    # [-10000, -1, -1, -1, -1, -1, -1, -10000]
+    [-1000, 25, -10, 5, 5, -10, 25, -1000],
 ])
 
 
@@ -51,36 +42,23 @@ class AI(object):
         self.candidate_list.clear()
         possible_pos = self.get_possible_pos_list(chessboard, self.color)
         top_val = -math.inf
-        # print(self.color)
-        # print(chessboard)
-        # print("----------------------------------------")
-        # print("----------------------------------------")
-        # print("----------------------------------------")
-        # print(possible_pos)
         for pos in possible_pos:
-            # print(pos)
-            updated_chessboard = self.update_board(chessboard, self.color, pos[0], pos[1])
-            # print(updated_chessboard)
-            pos_value = self.min_value(
+            updated_chessboard = self.update_board(
+                chessboard, self.color, pos[0], pos[1])
+            cur_val = self.min_value(
                 updated_chessboard, -math.inf, math.inf, search_depth)
-            # print(pos)
-            # print(pos_value)
-            # print(updated_chessboard)
-            # print("----------------------------------------")
-            if pos_value > top_val:
-                top_val = pos_value
+            if cur_val > top_val:
+                top_val = cur_val
                 self.candidate_list.append(pos)
             else:
                 self.candidate_list.insert(0, pos)
-        # print(top_val)
         return self.candidate_list
 
-    def evaluate(self, chessboard):
-        point = 0
-        # point += np.sum(chessboard * weight)
-        # point *= self.color
+    def evaluate(self, chessboard, cur_color):
+        cnt, point = 0, 0
         for y, x in np.ndindex(chessboard.shape):
-            if chessboard[y][x] == self.color:
+            if chessboard[y][x] == cur_color:
+                cnt += 1
                 point += weight[y][x]
         return point
 
@@ -152,7 +130,7 @@ class AI(object):
         neighbour_enemy = self.check_neighbour(
             updated_chessboard, cur_color, y, x)
         for direction in neighbour_enemy:
-            direction_flag = False
+            flag = False
             yi = direction[0]
             xi = direction[1]
             y_cur = y + yi
@@ -164,22 +142,22 @@ class AI(object):
                 if self.not_out_of_bound(y_cur, x_cur):
                     # 不可能紧挨着，因为是enemy direction
                     if updated_chessboard[y_cur][x_cur] == cur_color:
-                        direction_flag = True
+                        flag = True
                         break
                     elif updated_chessboard[y_cur][x_cur] == 0:
                         break
-            if direction_flag:
+            if flag:
                 y_temp, x_temp = y, x
-                while y_temp != y_cur or x_temp != x_cur:
-                    updated_chessboard[y_temp][x_temp] = cur_color
+                while y_temp != y_cur and x_temp != x_cur:
                     y_temp += yi
                     x_temp += xi
+                    updated_chessboard[y_temp][x_temp] = cur_color
         return updated_chessboard
 
     def max_value(self, chessboard, alpha, beta, depth):
         cur_color = self.color
         if depth == 0:
-            return self.evaluate(chessboard)
+            return self.evaluate(chessboard, cur_color)
         possible_pos = self.get_possible_pos_list(chessboard, cur_color)
         if not possible_pos:
             return self.min_value(chessboard, alpha, beta, depth - 1)
@@ -195,7 +173,7 @@ class AI(object):
     def min_value(self, chessboard, alpha, beta, depth):
         cur_color = self.other_color
         if depth == 0:
-            return self.evaluate(chessboard)
+            return self.evaluate(chessboard, cur_color)
         possible_pos = self.get_possible_pos_list(chessboard, cur_color)
         if not possible_pos:
             return self.max_value(chessboard, alpha, beta, depth - 1)
@@ -207,17 +185,3 @@ class AI(object):
                 return value
             beta = min(beta, value)
         return value
-
-
-# tnf = np.array(
-#     [[0, -1, -1, -1, -1, -1, -1, 1],
-#      [1, 1, 1, 1, 1, 1, 1, 1],
-#      [1, 1, -1, -1, 1, 1, 1, 1],
-#      [1, 1, 1, 1, 1, 1, 1, 1],
-#      [-1, 1, -1, -1, -1, -1, -1, -1],
-#      [-1, 1, 1, -1, -1, 0, 0, 0],
-#      [-1, 0, 0, -1, 0, 0, 0, 0],
-#      [0, 0, 0, 0, 0, 0, 0, 0]])
-# #
-# ai = AI(8, -1, 5)
-# print(ai.go(tnf))
