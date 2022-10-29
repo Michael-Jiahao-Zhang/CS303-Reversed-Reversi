@@ -7,27 +7,28 @@ COLOR_BLACK = -1
 COLOR_WHITE = 1
 COLOR_NONE = 0
 random.seed(0)
-search_depth = 5
+search_depth = 4
+stable_factor = 10
 
 # 想办法让自己分最大
-weight = np.array([
-    [-10000, 25, -10, 5, 5, -10, 25, -10000],
-    [25, 100, -1, -1, -1, -1, 100, 25],
-    [-10, -1, -1, -1, -1, -1, -1, -10],
-    [-5, -1, -1, -1, -1, -1, -1, -5],
-    [-5, -1, -1, -1, -1, -1, -1, -5],
-    [-10, -1, -1, -1, -1, -1, -1, -10],
-    [25, 100, -1, -1, -1, -1, 100, 25],
-    [-10000, 25, -10, 5, 5, -10, 25, -10000]
-    # [-10000, -1, -1, -1, -1, -1, -1, -10000],
-    # [-1, -1, -1, -1, -1, -1, -1, -1],
-    # [-1, -1, -1, -1, -1, -1, -1, -1],
-    # [-1, -1, -1, -1, -1, -1, -1, -1],
-    # [-1, -1, -1, -1, -1, -1, -1, -1],
-    # [-1, -1, -1, -1, -1, -1, -1, -1],
-    # [-1, -1, -1, -1, -1, -1, -1, -1],
-    # [-10000, -1, -1, -1, -1, -1, -1, -10000]
-])
+weight = np.array([[-500, 20, -100, -50, -50, -100, 20, -500],
+                   [20, 150, -4, -2, -2, -4, 150, 20],
+                   [-100, -4, -8, -1, -1, -8, -4, -10],
+                   [-5, -2, -1, 0, 0, -1, -2, -5],
+                   [-5, -2, -1, 0, 0, -1, -2, -5],
+                   [-100, -4, -8, -1, -1, -8, -4, -10],
+                   [20, 150, -4, -2, -2, -4, 150, 20],
+                   [-500, 20, -100, -50, -50, -100, 20, -500]
+                   ])
+
+weight_end = np.array([[-5, -1, -1, -1, -1, -1, -1, -5],
+                       [-1, 1, -1, -1, -1, -1, 1, -1],
+                       [-1, -1, -1, -1, -1, -1, -1, -1],
+                       [-1, -1, -1, -1, -1, -1, -1, -1],
+                       [-1, -1, -1, -1, -1, -1, -1, -1],
+                       [-1, -1, -1, -1, -1, -1, -1, -1],
+                       [-1, 1, -1, -1, -1, -1, 1, -1],
+                       [-5, -1, -1, -1, -1, -1, -1, -5]])
 
 
 # don't change the class name
@@ -40,7 +41,7 @@ class AI(object):
         self.chessboard_size = chessboard_size
         # You are white or black
         self.color = color
-        self.other_color = -color
+        self.enemy_color = -color
         # the max time you should use, your algorithm's run time must not exceed the time limit.
         self.time_out = time_out
         # You need to add your decision to your candidate_list.
@@ -49,8 +50,10 @@ class AI(object):
 
     def go(self, chessboard):
         self.candidate_list.clear()
+        print(chessboard)
         possible_pos = self.get_possible_pos_list(chessboard, self.color)
         top_val = -math.inf
+        self.calculate_edge_stable(chessboard)
         # print(self.color)
         # print(chessboard)
         # print("----------------------------------------")
@@ -77,11 +80,19 @@ class AI(object):
 
     def evaluate(self, chessboard):
         point = 0
-        # point += np.sum(chessboard * weight)
-        # point *= self.color
-        for y, x in np.ndindex(chessboard.shape):
-            if chessboard[y][x] == self.color:
-                point += weight[y][x]
+        remaining_steps = len(np.where(chessboard == 0)[0])
+        if remaining_steps > 8:
+            point += np.sum(chessboard * weight)
+        else:
+            point += np.sum(chessboard * weight_end)
+        point *= self.color
+        point += self.calculate_edge_stable(chessboard)
+
+        if len(self.get_possible_pos_list(chessboard, self.enemy_color)) == 0:
+            point -= 20
+        # for y, x in np.ndindex(chessboard.shape):
+        #     if chessboard[y][x] == self.color:
+        #         point += weight[y][x]
         return point
 
     # check whether it has opponent neighbour, and return a direction
@@ -193,7 +204,7 @@ class AI(object):
         return value
 
     def min_value(self, chessboard, alpha, beta, depth):
-        cur_color = self.other_color
+        cur_color = self.enemy_color
         if depth == 0:
             return self.evaluate(chessboard)
         possible_pos = self.get_possible_pos_list(chessboard, cur_color)
@@ -208,16 +219,143 @@ class AI(object):
             beta = min(beta, value)
         return value
 
+    def calculate_edge_stable(self, chessboard):
+        cnt_self, cnt_enemy = 0, 0
+        dup_self_cnt, dup_enemy_cnt = 0, 0
+        if chessboard[0][0] == self.color:
+            cnt_self += 1
+            i, j = 1, 1
+            while chessboard[i][0] == self.color and i < 7:
+                cnt_self += 1
+                i += 1
+            while chessboard[0][j] == self.color and j < 7:
+                cnt_self += 1
+                j += 1
+            if i == 7 and chessboard[7][0] == self.color:
+                dup_self_cnt += 1
+            if j == 7 and chessboard[0][7] == self.color:
+                dup_self_cnt += 1
+
+        if chessboard[0][0] == self.enemy_color:
+            cnt_enemy += 1
+            i, j = 1, 1
+            while chessboard[i][0] == self.enemy_color and i < 7:
+                cnt_enemy += 1
+                i += 1
+            while chessboard[0][j] == self.enemy_color and j < 7:
+                cnt_enemy += 1
+                j += 1
+            if i == 7 and chessboard[7][0] == self.enemy_color:
+                dup_enemy_cnt += 1
+            if j == 7 and chessboard[0][7] == self.enemy_color:
+                dup_enemy_cnt += 1
+
+        if chessboard[0][7] == self.color:
+            cnt_self += 1
+            i, j = 1, 1
+            while chessboard[i][7] == self.color and i < 7:
+                cnt_self += 1
+                i += 1
+            while chessboard[0][7 - j] == self.color and j < 7:
+                cnt_self += 1
+                j += 1
+            if i == 7 and chessboard[7][7] == self.color:
+                dup_self_cnt += 1
+            if j == 7 and chessboard[0][0] == self.color:
+                dup_self_cnt += 1
+
+        if chessboard[0][7] == self.enemy_color:
+            cnt_enemy += 1
+            i, j = 1, 1
+            while chessboard[i][7] == self.enemy_color and i < 7:
+                cnt_enemy += 1
+                i += 1
+            while chessboard[0][7 - j] == self.enemy_color and j < 7:
+                cnt_enemy += 1
+                j += 1
+            if i == 7 and chessboard[7][7] == self.enemy_color:
+                dup_enemy_cnt += 1
+            if j == 7 and chessboard[0][0] == self.enemy_color:
+                dup_enemy_cnt += 1
+
+        if chessboard[7][0] == self.color:
+            cnt_self += 1
+            i, j = 1, 1
+            while chessboard[7 - i][0] == self.color and i < 7:
+                cnt_self += 1
+                i += 1
+            while chessboard[7][j] == self.color and j < 7:
+                cnt_self += 1
+                j += 1
+
+            if i == 7 and chessboard[0][0] == self.color:
+                dup_self_cnt += 1
+            if j == 7 and chessboard[7][7] == self.color:
+                dup_self_cnt += 1
+
+        if chessboard[7][0] == self.enemy_color:
+            cnt_enemy += 1
+            i, j = 1, 1
+            while chessboard[7 - i][0] == self.enemy_color and i < 7:
+                cnt_enemy += 1
+                i += 1
+            while chessboard[7][j] == self.enemy_color and j < 7:
+                cnt_enemy += 1
+                j += 1
+
+            if i == 7 and chessboard[0][0] == self.enemy_color:
+                dup_enemy_cnt += 1
+            if j == 7 and chessboard[7][7] == self.enemy_color:
+                dup_enemy_cnt += 1
+
+        if chessboard[7][7] == self.color:
+            cnt_self += 1
+            i, j = 1, 1
+            while chessboard[7 - i][7] == self.color and i < 7:
+                cnt_self += 1
+                i += 1
+            while chessboard[7][7 - j] == self.color and j < 7:
+                cnt_self += 1
+                j += 1
+
+            if i == 7 and chessboard[0][7] == self.color:
+                dup_self_cnt += 1
+            if j == 7 and chessboard[7][0] == self.color:
+                dup_self_cnt += 1
+
+        if chessboard[7][7] == self.enemy_color:
+            cnt_enemy += 1
+            i, j = 1, 1
+            while chessboard[7 - i][7] == self.enemy_color and i < 7:
+                cnt_enemy += 1
+                i += 1
+            while chessboard[7][7 - j] == self.enemy_color and j < 7:
+                cnt_enemy += 1
+                j += 1
+
+            if i == 7 and chessboard[0][7] == self.enemy_color:
+                dup_enemy_cnt += 1
+            if j == 7 and chessboard[7][0] == self.enemy_color:
+                dup_enemy_cnt += 1
+
+        dup_self_cnt /= 2
+        dup_enemy_cnt /= 2
+        cnt_self -= int(6 * dup_self_cnt)
+        cnt_enemy -= int(6 * dup_enemy_cnt)
+        print(cnt_self)
+        print(cnt_enemy)
+
+        return stable_factor * (cnt_enemy - cnt_self)
 
 # tnf = np.array(
-#     [[0, -1, -1, -1, -1, -1, -1, 1],
+#     [[1, -1, -1, -1, -1, -1, -1, -1],
 #      [1, 1, 1, 1, 1, 1, 1, 1],
 #      [1, 1, -1, -1, 1, 1, 1, 1],
 #      [1, 1, 1, 1, 1, 1, 1, 1],
-#      [-1, 1, -1, -1, -1, -1, -1, -1],
-#      [-1, 1, 1, -1, -1, 0, 0, 0],
-#      [-1, 0, 0, -1, 0, 0, 0, 0],
-#      [0, 0, 0, 0, 0, 0, 0, 0]])
+#      [1, 1, -1, -1, -1, -1, -1, -1],
+#      [1, 1, 1, -1, -1, 0, 0, 0],
+#      [1, 0, 0, -1, 0, 0, 0, 1],
+#      [1, 1, -1, 1, -1, -1, -1, -1]])
 # #
-# ai = AI(8, -1, 5)
+# ai = AI(8, 1, 5)
 # print(ai.go(tnf))
