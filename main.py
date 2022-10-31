@@ -50,10 +50,8 @@ class AI(object):
 
     def go(self, chessboard):
         self.candidate_list.clear()
-        print(chessboard)
         possible_pos = self.get_possible_pos_list(chessboard, self.color)
         top_val = -math.inf
-        self.calculate_edge_stable(chessboard)
         for pos in possible_pos:
             updated_chessboard = self.update_board(chessboard, self.color, pos[0], pos[1])
             pos_value = self.min_value(
@@ -326,7 +324,5 @@ class AI(object):
         dup_enemy_cnt /= 2
         cnt_self -= int(6 * dup_self_cnt)
         cnt_enemy -= int(6 * dup_enemy_cnt)
-        print(cnt_self)
-        print(cnt_enemy)
 
         return stable_factor * (cnt_enemy - cnt_self)
