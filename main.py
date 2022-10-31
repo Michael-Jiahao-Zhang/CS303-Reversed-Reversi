@@ -54,28 +54,15 @@ class AI(object):
         possible_pos = self.get_possible_pos_list(chessboard, self.color)
         top_val = -math.inf
         self.calculate_edge_stable(chessboard)
-        # print(self.color)
-        # print(chessboard)
-        # print("----------------------------------------")
-        # print("----------------------------------------")
-        # print("----------------------------------------")
-        # print(possible_pos)
         for pos in possible_pos:
-            # print(pos)
             updated_chessboard = self.update_board(chessboard, self.color, pos[0], pos[1])
-            # print(updated_chessboard)
             pos_value = self.min_value(
                 updated_chessboard, -math.inf, math.inf, search_depth)
-            # print(pos)
-            # print(pos_value)
-            # print(updated_chessboard)
-            # print("----------------------------------------")
             if pos_value > top_val:
                 top_val = pos_value
                 self.candidate_list.append(pos)
             else:
                 self.candidate_list.insert(0, pos)
-        # print(top_val)
         return self.candidate_list
 
     def evaluate(self, chessboard):
@@ -90,9 +77,6 @@ class AI(object):
 
         if len(self.get_possible_pos_list(chessboard, self.enemy_color)) == 0:
             point -= 20
-        # for y, x in np.ndindex(chessboard.shape):
-        #     if chessboard[y][x] == self.color:
-        #         point += weight[y][x]
         return point
 
     # check whether it has opponent neighbour, and return a direction
@@ -346,16 +330,3 @@ class AI(object):
         print(cnt_enemy)
 
         return stable_factor * (cnt_enemy - cnt_self)
-
-# tnf = np.array(
-#     [[1, -1, -1, -1, -1, -1, -1, -1],
-#      [1, 1, 1, 1, 1, 1, 1, 1],
-#      [1, 1, -1, -1, 1, 1, 1, 1],
-#      [1, 1, 1, 1, 1, 1, 1, 1],
-#      [1, 1, -1, -1, -1, -1, -1, -1],
-#      [1, 1, 1, -1, -1, 0, 0, 0],
-#      [1, 0, 0, -1, 0, 0, 0, 1],
-#      [1, 1, -1, 1, -1, -1, -1, -1]])
-# #
-# ai = AI(8, 1, 5)
-# print(ai.go(tnf))
